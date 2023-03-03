@@ -1,2 +1,19 @@
-# ndi-ptz-server
-This python server communicates with pan-tilt-zoom (PTZ) cameras using the NDI and Free-D protocols
+# PTZ Server (Work in Progress)
+
+This python server communicates with pan-tilt-zoom (PTZ) cameras using the NDI and Free-D protocols. Commands are issued using NDI (via the [ndi-python](https://github.com/buresu/ndi-python) library) and status is read from the camera using the free-d protocol. A Flask server opens up an HTTP API with two endpoints: for querying current camera state (as read by Free-D) and for issuing a command to the camera (using NDI's PTZ commands).
+
+## Instructions
+
+1. Install dependencies using pip (python package manager):
+
+```sh
+pip install ndi-python flask flask_cors cv2 numpy
+```
+
+2. Start the server:
+
+```sh
+python server.py
+```
+
+3. Start the Web-UI using a separate server (I use VSCode Live Server Extension) and access the web UI.
