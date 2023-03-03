@@ -1,4 +1,4 @@
-from flask import Flask, request, make_response
+from flask import Flask, request, make_response, send_from_directory
 from flask_cors import CORS
 from multiprocessing import Process, Queue, SimpleQueue
 
@@ -42,6 +42,13 @@ ndi_queue = SimpleQueue()
 
 # for debugging
 debug_mode = True
+
+@flask_app.route('/', defaults=dict(filename=None))
+@flask_app.route('/<path:filename>', methods=['GET', 'POST'])
+def index(filename):
+    filename = filename or 'index.html'
+    if request.method == 'GET':
+        return send_from_directory('./web-control/', filename)
 
 @flask_app.route("/ptz_command", methods=["POST", "OPTIONS"])
 def send_ptz_command():
