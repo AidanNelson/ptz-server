@@ -151,7 +151,7 @@ function init() {
   let controls = new OrbitControls(camera, renderer.domElement);
 
   // create a sphere
-  let tex = new THREE.TextureLoader().load("./360.jpg");
+  let tex = new THREE.TextureLoader().load("./vestibule_2k.jpg");
   let geometry = new THREE.SphereGeometry(10, 24, 24);
   let material = new THREE.MeshBasicMaterial({
     // color: "blue",

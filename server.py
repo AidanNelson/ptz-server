@@ -44,7 +44,7 @@ ndi_queue = SimpleQueue()
 debug_mode = True
 
 @flask_app.route('/', defaults=dict(filename=None))
-@flask_app.route('/<path:filename>', methods=['GET', 'POST'])
+@flask_app.route('/<path:filename>', methods=['GET'])
 def index(filename):
     filename = filename or 'index.html'
     if request.method == 'GET':
