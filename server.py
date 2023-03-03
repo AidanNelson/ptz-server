@@ -6,8 +6,6 @@ import math
 import time
 
 # NDI Initialization
-import numpy as np
-import cv2 as cv
 import NDIlib as ndi
 
 # PTZ Free-D
@@ -59,6 +57,7 @@ def send_ptz_command():
         response.headers.add('Access-Control-Allow-Headers', "*")
         response.headers.add('Access-Control-Allow-Methods', "*")
         return response
+    
     elif request.method == "POST": # The actual request following the preflight
         print("POST")
 
@@ -72,6 +71,7 @@ def send_ptz_command():
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
+    
     else:
         raise RuntimeError("Weird - don't know how to handle method {}".format(request.method))
 
@@ -95,12 +95,6 @@ def get_ptz_status():
         print("latest_value: " + str(latest_value))
         data =  {"ptz": latest_value}
 
-        # get value from request
-        # desired_ptz = request.get_json()
-        # print(desired_ptz)
-
-        # send NDI commands here?
-        
         if debug_mode:
             data = {"ptz": [(175*math.sin(time.time()/10)) * 0.01,(70*math.sin(time.time()/10)) * 1,0]}
         
@@ -116,7 +110,6 @@ def free_d_loop(q):
     q.put([0,0,0])
 
     while(True):
-        # print("ok")
         bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
         (pan, tilt, zoom) = parseFreeD(bytesAddressPair)
         # print(str(pan)+" " + str(tilt) + " " + str(zoom))
@@ -149,13 +142,13 @@ def ndi_loop(ndi_queue):
 
     ndi.recv_connect(ndi_recv, sources[0])
     ndi.find_destroy(ndi_find)
-    cv.startWindowThread()
 
     ptz_enabled = False
 
     while True:
-        t, v, _, _ = ndi.recv_capture_v2(ndi_recv, 10)
-        # we'll use this negative zoom value to check whether a new status has b
+        t, _, _, _ = ndi.recv_capture_v2(ndi_recv, 10)
+
+        # check for incoming commands from the queue
         received_command = False
         latest_value = [0,0,0]
 
@@ -165,51 +158,30 @@ def ndi_loop(ndi_queue):
 
         if received_command and ptz_enabled:
             print("Got command: " +  str(latest_value))
-            # ndi.recv_ptz_zoom(ndi_recv,0.75)
+
+            # pan and tilt
             ndi.recv_ptz_pan_tilt_speed(ndi_recv, latest_value[0], latest_value[1])
-
-        # if t == ndi.FRAME_TYPE_METADATA:
-        #     print("~~ METADATA ~~")
-        #     print(frame)
-        #     print("~~~~~~~~~~~~~~~~")
-
-        # if t == ndi.FRAME_TYPE_VIDEO:
-        #     # print('Video data received (%dx%d).' % (v.xres, v.yres))
-        #     frame = np.copy(v.data)
-        #     cv.imshow('ndi image', frame)
-        #     ndi.recv_free_video_v2(ndi_recv, v)
+            
+            # zoom
+            ndi.recv_ptz_zoom(ndi_recv,latest_value[2])
 
         if t == ndi.FRANE_TYPE_STATUS_CHANGE:
             print ("FRAME STATUS CHANGE")
             ptz_enabled = ndi.recv_ptz_is_supported(ndi_recv)
             print("PTZ is enabled? " + str(ptz_enabled))
             
-        # if cv.waitKey(1) & 0xff == ord('q'):
-        #     break
 
-        # if cv.waitKey(1) & 0xff == ord('z') and ptz_enabled:
-        #     print("Setting Zoom to 0.75")
-        #     ndi.recv_ptz_zoom(ndi_recv,0.75)
-
-        # if cv.waitKey(1) & 0xff == ord('c') and ptz_enabled:
-        #     print("Setting Zoom to 0.25")
-        #     ndi.recv_ptz_zoom(ndi_recv,0.25)
-            
-
+    # TODO make sure these cleanup commands run 
     ndi.recv_destroy(ndi_recv)
     ndi.destroy()
-    cv.destroyAllWindows()
-
     return 0
 
 
 if __name__ == "__main__":
-    p = Process(target=free_d_loop, args=(free_d_queue,))
-    p.start()
+    free_d_process = Process(target=free_d_loop, args=(free_d_queue,))
+    free_d_process.start()
 
     ndi_process = Process(target=ndi_loop, args=(ndi_queue,))
     ndi_process.start()
 
     flask_app.run(debug=False, use_reloader=False)
-
-    p.join()    
