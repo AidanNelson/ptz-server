@@ -18,6 +18,8 @@ python server.py
 
 3. Access the web controller at http://127.0.0.1:5000.
 
+![a webpage shows a simple representation of a pan-tilt-zoom camera in a 3D environment](./docs/web-control.png)
+
 ## Links
 
 - Equirectangular Image from [PolyHaven](https://polyhaven.com/a/vestibule)
