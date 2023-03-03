@@ -92,11 +92,10 @@ def get_ptz_status():
         while not free_d_queue.empty():
             latest_value = free_d_queue.get()
             
-        print("latest_value: " + str(latest_value))
         data =  {"ptz": latest_value}
 
         if debug_mode:
-            data = {"ptz": [(175*math.sin(time.time()/10)) * 0.01,(70*math.sin(time.time()/10)) * 1,0]}
+            data = {"ptz": [(175*math.sin(time.time()/10)) * 0.01,(70*math.sin(time.time()/10)) * 1,0.5 + (math.sin(time.time()/10)/2)]}
         
         response = make_response(data)
         response.headers.add("Access-Control-Allow-Origin", "*")

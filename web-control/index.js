@@ -1,8 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-let currentPTZStatus = { pan: 0, tilt: 0, zoom: 0 };
-
 async function getPTZStatus() {
   // console.log("Requesting PTZ status");
   fetch("http://127.0.0.1:5000/ptz_status", {
@@ -62,74 +60,11 @@ window.document.addEventListener(
   false
 );
 
-let ptz;
-
-class PTZCamera {
-  constructor(aspect = 16 / 9) {
-    this.cam = new THREE.PerspectiveCamera(20, aspect, 0.1, 10);
-    this.cam.rotation.order = "YXZ";
-    scene.add(this.cam);
-
-    this.raycaster = new THREE.Raycaster();
-    // this.target = new THREE.Vector3();
-    this.direction = new THREE.Vector3();
-
-    // create a helper for the camera
-    this.helper = new THREE.CameraHelper(this.cam);
-    scene.add(this.helper);
-
-    this.camBody = new THREE.Mesh(
-      new THREE.BoxGeometry(0.1, 0.2, 0.3),
-      new THREE.MeshBasicMaterial({ color: "blue" })
-    );
-    const directionIndicator = new THREE.Mesh(
-      new THREE.BoxGeometry(0.01, 0.01, 10),
-      new THREE.MeshBasicMaterial({ color: "red" })
-    );
-    directionIndicator.position.set(0, 0, -5);
-    this.camBody.add(directionIndicator);
-    this.camBody.position.set(0, 0, 0.3 / 2);
-    this.cam.add(this.camBody);
-    // this.testObject.rotation.order = "YXZ";
-    // scene.add(this.testObject);
-
-    this.panAxis = new THREE.Vector3(0, 1, 0);
-    this.tiltAxis = new THREE.Vector3(1, 0, 0);
-  }
-
-  update(panAngle = 0, tiltAngle = 0, zoomValue = 50) {
-    // this.testObject.rotation.y = THREE.MathUtils.degToRad(panAngle);
-    // this.testObject.rotation.x = THREE.MathUtils.degToRad(tiltAngle);
-    console.log(tiltAngle);
-    this.cam.rotation.y = THREE.MathUtils.degToRad(panAngle);
-    this.cam.rotation.x = THREE.MathUtils.degToRad(tiltAngle);
-    this.helper.update();
-    // this.raycaster.setFromCamera({ x: 0, y: 0 }, this.cam);
-    // let intersections = this.raycaster.intersectObject(camViewMesh);
-    // console.log("intersections:", intersections);
-    // this.target.copy(intersections[0].point);
-    this.direction.set(0, 0, -1);
-    this.direction.applyQuaternion(this.cam.quaternion);
-    this.direction.normalize();
-    // console.log("{}{}{}");
-    // console.log(this.direction.normalize());
-    // console.log(this.target.normalize());
-    //
-    // this.tiltHandler.setRotationFromAxisAngle(
-    //   this.tiltAxis,
-    //   THREE.MathUtils.degToRad(tiltAngle)
-    // );
-    // this.panHandler.setRotationFromAxisAngle(
-    //   this.panAxis,
-    //   THREE.MathUtils.degToRad(panAngle)
-    // );
-    // console.log(this.cam);
-  }
-}
-
-let scene, camera, renderer, my3DObject, camViewMesh;
+let scene, camera, renderer, camViewMesh;
 
 let raycaster, pointer;
+let ptzCamera;
+let currentPTZStatus = { pan: 0, tilt: 0, zoom: 0 };
 
 function init() {
   // create a scene in which all other objects will exist
@@ -198,8 +133,8 @@ function init() {
 
       // calculating alt-az difference
       // https://stackoverflow.com/questions/12229950/the-x-angle-between-two-3d-vectors
-      const XZComponentOfCameraDirection = ptz.direction.clone();
-      const XYComponentOfCameraDirection = ptz.direction.clone();
+      const XZComponentOfCameraDirection = ptzCamera.direction.clone();
+      const XYComponentOfCameraDirection = ptzCamera.direction.clone();
       XZComponentOfCameraDirection.set(
         XZComponentOfCameraDirection.x,
         0,
@@ -274,7 +209,7 @@ function init() {
   // and add it to the scene
   scene.add(camViewMesh);
 
-  ptz = new PTZCamera(16 / 9);
+  ptzCamera = new PTZCamera(16 / 9);
 
   loop();
 }
@@ -285,9 +220,8 @@ function loop() {
   if (frameCount % 10 === 0) {
     getPTZStatus();
   }
-  // add some movement
-  // my3DObject.rotateY(0.01);
-  ptz.update(
+
+  ptzCamera.update(
     currentPTZStatus.pan,
     currentPTZStatus.tilt,
     currentPTZStatus.zoom
@@ -299,4 +233,86 @@ function loop() {
   window.requestAnimationFrame(loop); // pass the name of your loop function into this function
 }
 
-init();
+window.onload = init;
+
+// This class will keep track of the PTZ Camera
+
+class PTZCamera {
+  constructor(
+    aspect = 16 / 9,
+    minimumFieldOfView = 5,
+    maximumFieldOfView = 75
+  ) {
+    this.minimumFieldOfView = minimumFieldOfView;
+    this.maximumFieldOfView = maximumFieldOfView;
+
+    this.cam = new THREE.PerspectiveCamera(minimumFieldOfView, aspect, 0.1, 10);
+    this.cam.rotation.order = "YXZ";
+    scene.add(this.cam);
+
+    this.raycaster = new THREE.Raycaster();
+    this.direction = new THREE.Vector3();
+
+    // create a helper for the camera
+    this.helper = new THREE.CameraHelper(this.cam);
+    scene.add(this.helper);
+
+    this.camBody = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 0.2, 0.3),
+      new THREE.MeshBasicMaterial({ color: "blue" })
+    );
+    const directionIndicator = new THREE.Mesh(
+      new THREE.BoxGeometry(0.01, 0.01, 10),
+      new THREE.MeshBasicMaterial({ color: "red" })
+    );
+    directionIndicator.position.set(0, 0, -5);
+    this.camBody.add(directionIndicator);
+    this.camBody.position.set(0, 0, 0.3 / 2);
+    this.cam.add(this.camBody);
+
+    this.panAxis = new THREE.Vector3(0, 1, 0);
+    this.tiltAxis = new THREE.Vector3(1, 0, 0);
+  }
+
+  update(panAngle = 0, tiltAngle = 0, zoomValue = 0) {
+    this.cam.rotation.y = THREE.MathUtils.degToRad(panAngle);
+    this.cam.rotation.x = THREE.MathUtils.degToRad(tiltAngle);
+
+    this.cam.fov = scale(
+      zoomValue,
+      0,
+      1,
+      this.minimumFieldOfView,
+      this.maximumFieldOfView
+    );
+    this.cam.updateProjectionMatrix();
+    console.log(this.cam.fov);
+    this.helper.update();
+
+    // this.raycaster.setFromCamera({ x: 0, y: 0 }, this.cam);
+    // let intersections = this.raycaster.intersectObject(camViewMesh);
+    // console.log("intersections:", intersections);
+    // this.target.copy(intersections[0].point);
+    this.direction.set(0, 0, -1);
+    this.direction.applyQuaternion(this.cam.quaternion);
+    this.direction.normalize();
+    // console.log("{}{}{}");
+    // console.log(this.direction.normalize());
+    // console.log(this.target.normalize());
+    //
+    // this.tiltHandler.setRotationFromAxisAngle(
+    //   this.tiltAxis,
+    //   THREE.MathUtils.degToRad(tiltAngle)
+    // );
+    // this.panHandler.setRotationFromAxisAngle(
+    //   this.panAxis,
+    //   THREE.MathUtils.degToRad(panAngle)
+    // );
+    // console.log(this.cam);
+  }
+}
+
+// https://stackoverflow.com/questions/10756313/javascript-jquery-map-a-range-of-numbers-to-another-range-of-numbers
+function scale(number, inMin, inMax, outMin, outMax) {
+  return ((number - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
+}
