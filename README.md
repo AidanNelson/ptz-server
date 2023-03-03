@@ -16,4 +16,4 @@ pip install ndi-python flask flask_cors cv2 numpy
 python server.py
 ```
 
-3. Start the Web-UI using a separate server (I use VSCode Live Server Extension) and access the web UI.
+3. Access the web controller at http://127.0.0.1:5000.
